@@ -1,9 +1,11 @@
 from flask import Flask
 from flask import jsonify
 import random
+import os
+import glob
 
-QUOTES_FILE = "./quotes.txt" # quote file
-quotes = [] # stores all quotes
+QUOTES_DIR = "./" # directory containing quote files
+quotes = [] # stores all quotes from all sources
 
 # a quote
 class Quote(object):
@@ -11,14 +13,36 @@ class Quote(object):
         self.quote = quote
         self.by = by
 
-# Loads quotes from a file
+# Parse a single quote line (assumes "-" delimiter for all formats)
+def parseQuote(line):
+    """Parse a quote line and return a Quote object.
+    
+    Currently supports format: "quote text - author"
+    """
+    quote, by = line.split("-")
+    return Quote(quote.strip(), by.strip())
+
+# Loads quotes from all available quote files
 def loadQuotes():
-    with open(QUOTES_FILE) as file:
-        lines = file.readlines()
-        lines = [x.strip() for x in lines] 
-        for line in lines:
-            quote, by = line.split("-")
-            quotes.append(Quote(quote, by))
+    """Load quotes from multiple sources in the quotes directory."""
+    quote_files = glob.glob(os.path.join(QUOTES_DIR, "quotes*.txt"))
+    
+    for quote_file in quote_files:
+        print(f"Loading quotes from {quote_file}")
+        with open(quote_file) as file:
+            lines = file.readlines()
+            lines = [x.strip() for x in lines if x.strip()] 
+            
+            for line in lines:
+                try:
+                    quote = parseQuote(line)
+                    quotes.append(quote)
+                except Exception as e:
+                    # Skip malformed quotes silently
+                    print(f"Warning: Failed to parse quote: {line[:50]}... Error: {e}")
+                    continue
+    
+    print(f"Loaded {len(quotes)} quotes from {len(quote_files)} sources")
             
 app = Flask(__name__)
 
