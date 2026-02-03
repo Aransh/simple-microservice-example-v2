@@ -13,14 +13,36 @@ class Quote(object):
         self.quote = quote
         self.by = by
 
-# Parse a single quote line (assumes "-" delimiter for all formats)
+# Parse a single quote line with support for multiple delimiters
 def parseQuote(line):
     """Parse a quote line and return a Quote object.
     
-    Currently supports format: "quote text - author"
+    Supports multiple formats:
+    - "quote text -author" (dash delimiter, space before dash)
+    - "author: quote text" (colon delimiter)
+    - "author|quote text" (pipe delimiter)
     """
-    quote, by = line.split("-")
-    return Quote(quote.strip(), by.strip())
+    # Try dash delimiter first (original format: quote -author)
+    # Accept both " -" (with space) and just "-" (without space before dash)
+    if " -" in line:
+        parts = line.rsplit(" -", 1)
+        return Quote(parts[0].strip(), parts[1].strip())
+    elif "-" in line and line.rfind("-") > 0:
+        parts = line.rsplit("-", 1)
+        return Quote(parts[0].strip(), parts[1].strip())
+    
+    # Try colon delimiter (new format: author: quote)
+    elif ": " in line:
+        parts = line.split(": ", 1)
+        return Quote(parts[1].strip(), parts[0].strip())
+    
+    # Try pipe delimiter (legacy format: author|quote)
+    elif "|" in line:
+        parts = line.split("|", 1)
+        return Quote(parts[1].strip(), parts[0].strip())
+    
+    else:
+        raise ValueError(f"Unable to parse quote: no recognized delimiter found")
 
 # Loads quotes from all available quote files
 def loadQuotes():
